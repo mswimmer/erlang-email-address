@@ -47,5 +47,5 @@ email_validation_test_() ->
 	?_assertNot(email_address:is_valid("Abc..123@example.com")),
 	?_assertNot(email_address:is_valid("\"(),:;<>[\]@example.com")),
 	?_assertNot(email_address:is_valid("just\"not\"right@example.com")),
-	?_assertNot(email_address:is_valid("this\ is\"really\"not\allowed@example.com"))
+	?_assertNot(email_address:is_valid("this is\"really\"not\allowed@example.com"))
        ].

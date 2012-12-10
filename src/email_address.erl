@@ -6,6 +6,15 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
+-define(debug, ok).
+
+-ifdef(debug).
+-define(DEBUG(Format, Args),
+  io:format("~s.~w: DEBUG: " ++ Format ++ "~n", [ ?MODULE, ?LINE | Args])).
+-else.
+-define(DEBUG(Format, Args), true).
+-endif.
+
 % email addresses are ascii unless there is the RFC 6530/RFC 6531 extension in effect.
 % TODO: need to support these extensions in the future
     % the local part has few rules:
@@ -21,35 +30,42 @@
 
 
 is_valid(Addr) when is_list(Addr) ->
-    LocalPartPat = "[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@",
-    {ok, LocalMP} = re:compile(LocalPartPat),
-    is_valid(re:run(Addr, LocalMP), Addr).
+%    LocalPartPat = "[a-z0-9!#$%&'\*\+/=\?^_`\{\|\}~\-]+(?:\.[a-z0-9!#$%&'\*\+/=\?^_`\{\|\}~\-]+)*@",
+    {ok, LocalMP} = re:compile("((?:[a-z0-9_$%!][a-z0-9\-_$%!/=\+\\\\]+)|(?:\"[a-z0-9@][a-z0-9@ \\\\]*[a-z0-9]\"))@[a-z0-9\.\-]+", [caseless, anchored]),
+    Match = re:run(Addr, LocalMP),
+    ?DEBUG("Match: ~p", [Match]),
+    is_valid(Match, Addr).
 
-is_valid(nomatch, _) -> 
+is_valid(nomatch, _) ->
     false;
-is_valid({match,Ranges}, Addr) when length(Ranges) =:= 1 ->
-    io:format("ranges: ~p~n", [Ranges]),
-    {Start, End} = lists:nth(1, Ranges),
-    io:format("range: ~p to ~p~n", [Start, End]),
+is_valid({match,Ranges}, Addr) when length(Ranges) =:= 2 ->
+    %io:format("ranges: ~p~n", [Ranges]),
+    {Start, End} = lists:nth(2, Ranges),
+    ?DEBUG("range: ~p to ~p", [Start, End]),
     is_valid(Start, End, Addr).
+%;
+%is_valid(Something, SomethingElse) ->
+%    log(Something),
+%    log(SomethingElse).
 
 is_valid(0, End, Addr) when End > 0 ->
-    io:format("~p[0..~p]~n", [Addr, End]),
-    domain_is_valid(string:sub_string(Addr, End+1));
+    ?DEBUG("~p[0..~p]", [Addr, End]),
+    domain_is_valid(string:sub_string(Addr, End+2));
 is_valid(_, _, _) ->
     false.    
 
 % TODO: need to fetch the TLDs dynamically from: http://data.iana.org/TLD/tlds-alpha-by-domain.txt
 domain_is_valid(FQDN) ->
-    io:format("matching ~p~n", [FQDN]),
-    DomRegex = "^([A-Z0-9\-]+\.)+(AC|AD|AE|AERO|AF|AG|AI|AL|AM|AN|AO|AQ|AR|ARPA|AS|ASIA|AT|AU|AW|AX|AZ|BA|BB|BD|BE|BF|BG|BH|BI|BIZ|BJ|BM|BN|BO|BR|BS|BT|BV|BW|BY|BZ|CA|CAT|CC|CD|CF|CG|CH|CI|CK|CL|CM|CN|CO|COM|COOP|CR|CU|CV|CW|CX|CY|CZ|DE|DJ|DK|DM|DO|DZ|EC|EDU|EE|EG|ER|ES|ET|EU|FI|FJ|FK|FM|FO|FR|GA|GB|GD|GE|GF|GG|GH|GI|GL|GM|GN|GOV|GP|GQ|GR|GS|GT|GU|GW|GY|HK|HM|HN|HR|HT|HU|ID|IE|IL|IM|IN|INFO|INT|IO|IQ|IR|IS|IT|JE|JM|JO|JOBS|JP|KE|KG|KH|KI|KM|KN|KP|KR|KW|KY|KZ|LA|LB|LC|LI|LK|LR|LS|LT|LU|LV|LY|MA|MC|MD|ME|MG|MH|MIL|MK|ML|MM|MN|MO|MOBI|MP|MQ|MR|MS|MT|MU|MUSEUM|MV|MW|MX|MY|MZ|NA|NAME|NC|NE|NET|NF|NG|NI|NL|NO|NP|NR|NU|NZ|OM|ORG|PA|PE|PF|PG|PH|PK|PL|PM|PN|POST|PR|PRO|PS|PT|PW|PY|QA|RE|RO|RS|RU|RW|SA|SB|SC|SD|SE|SG|SH|SI|SJ|SK|SL|SM|SN|SO|SR|ST|SU|SV|SX|SY|SZ|TC|TD|TEL|TF|TG|TH|TJ|TK|TL|TM|TN|TO|TP|TR|TRAVEL|TT|TV|TW|TZ|UA|UG|UK|US|UY|UZ|VA|VC|VE|VG|VI|VN|VU|WF|WS|XN--0ZWM56D|XN--11B5BS3A9AJ6G|XN--3E0B707E|XN--45BRJ9C|XN--80AKHBYKNJ4F|XN--80AO21A|XN--90A3AC|XN--9T4B11YI5A|XN--CLCHC0EA0B2G2A9GCD|XN--DEBA0AD|XN--FIQS8S|XN--FIQZ9S|XN--FPCRJ9C3D|XN--FZC2C9E2C|XN--G6W251D|XN--GECRJ9C|XN--H2BRJ9C|XN--HGBK6AJ7F53BBA|XN--HLCJ6AYA9ESC7A|XN--J6W193G|XN--JXALPDLP|XN--KGBECHTV|XN--KPRW13D|XN--KPRY57D|XN--LGBBAT1AD8J|XN--MGB9AWBF|XN--MGBAAM7A8H|XN--MGBAYH7GPA|XN--MGBBH1A71E|XN--MGBC0A9AZCG|XN--MGBERP4A5D4AR|XN--MGBX4CD0AB|XN--O3CW4H|XN--OGBPF8FL|XN--P1AI|XN--PGBS0DH|XN--S9BRJ9C|XN--WGBH1C|XN--WGBL6A|XN--XKC2AL3HYE2A|XN--XKC2DL3A5EE0H|XN--YFRO4I67O|XN--YGBI2AMMX|XN--ZCKZAH|XXX|YE|YT|ZA|ZM|ZW)$",
-	case re:run(FQDN,DomRegex,[caseless]) of
+    ?DEBUG("matching ~p", [FQDN]),
+    DomRegex = "^((?:(?:[A-Z0-9][A-Z0-9\-]+\.)+(?:AC|AD|AE|AERO|AF|AG|AI|AL|AM|AN|AO|AQ|AR|ARPA|AS|ASIA|AT|AU|AW|AX|AZ|BA|BB|BD|BE|BF|BG|BH|BI|BIZ|BJ|BM|BN|BO|BR|BS|BT|BV|BW|BY|BZ|CA|CAT|CC|CD|CF|CG|CH|CI|CK|CL|CM|CN|CO|COM|COOP|CR|CU|CV|CW|CX|CY|CZ|DE|DJ|DK|DM|DO|DZ|EC|EDU|EE|EG|ER|ES|ET|EU|FI|FJ|FK|FM|FO|FR|GA|GB|GD|GE|GF|GG|GH|GI|GL|GM|GN|GOV|GP|GQ|GR|GS|GT|GU|GW|GY|HK|HM|HN|HR|HT|HU|ID|IE|IL|IM|IN|INFO|INT|IO|IQ|IR|IS|IT|JE|JM|JO|JOBS|JP|KE|KG|KH|KI|KM|KN|KP|KR|KW|KY|KZ|LA|LB|LC|LI|LK|LR|LS|LT|LU|LV|LY|MA|MC|MD|ME|MG|MH|MIL|MK|ML|MM|MN|MO|MOBI|MP|MQ|MR|MS|MT|MU|MUSEUM|MV|MW|MX|MY|MZ|NA|NAME|NC|NE|NET|NF|NG|NI|NL|NO|NP|NR|NU|NZ|OM|ORG|PA|PE|PF|PG|PH|PK|PL|PM|PN|POST|PR|PRO|PS|PT|PW|PY|QA|RE|RO|RS|RU|RW|SA|SB|SC|SD|SE|SG|SH|SI|SJ|SK|SL|SM|SN|SO|SR|ST|SU|SV|SX|SY|SZ|TC|TD|TEL|TF|TG|TH|TJ|TK|TL|TM|TN|TO|TP|TR|TRAVEL|TT|TV|TW|TZ|UA|UG|UK|US|UY|UZ|VA|VC|VE|VG|VI|VN|VU|WF|WS|XN--0ZWM56D|XN--11B5BS3A9AJ6G|XN--3E0B707E|XN--45BRJ9C|XN--80AKHBYKNJ4F|XN--80AO21A|XN--90A3AC|XN--9T4B11YI5A|XN--CLCHC0EA0B2G2A9GCD|XN--DEBA0AD|XN--FIQS8S|XN--FIQZ9S|XN--FPCRJ9C3D|XN--FZC2C9E2C|XN--G6W251D|XN--GECRJ9C|XN--H2BRJ9C|XN--HGBK6AJ7F53BBA|XN--HLCJ6AYA9ESC7A|XN--J6W193G|XN--JXALPDLP|XN--KGBECHTV|XN--KPRW13D|XN--KPRY57D|XN--LGBBAT1AD8J|XN--MGB9AWBF|XN--MGBAAM7A8H|XN--MGBAYH7GPA|XN--MGBBH1A71E|XN--MGBC0A9AZCG|XN--MGBERP4A5D4AR|XN--MGBX4CD0AB|XN--O3CW4H|XN--OGBPF8FL|XN--P1AI|XN--PGBS0DH|XN--S9BRJ9C|XN--WGBH1C|XN--WGBL6A|XN--XKC2AL3HYE2A|XN--XKC2DL3A5EE0H|XN--YFRO4I67O|XN--YGBI2AMMX|XN--ZCKZAH|XXX|YE|YT|ZA|ZM|ZW))|(?:[0-9]{1,3}\.[0-9]{1-3}\.[0-9]{1,3}\.[0-9]{1,3})|(?:\[[0-9]{1,3}\.[0-9]{1-3}\.[0-9]{1,3}\.[0-9]{1,3}\]))$",
+	case re:run(FQDN,DomRegex,[caseless, anchored]) of
 	    {match, _Captured} ->
+		?DEBUG("Captured: ~p", [_Captured]),
 		true;
 	    matched ->
-		true
+		true;
+	    nomatch ->
+		false
 	end.
-
-% TLDs from http://mxr.mozilla.org/mozilla-central/source/netwerk/dns/effective_tld_names.dat?raw=1
 
 
