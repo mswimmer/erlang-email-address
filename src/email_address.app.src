@@ -1,0 +1,12 @@
+{application, email_address,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { email_address_app, []}},
+  {env, []}
+ ]}.
