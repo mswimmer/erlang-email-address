@@ -26,7 +26,7 @@ email_validation_test_() ->
 	?_assert(email_address:is_valid("firstname-lastname@example.com")),
 	?_assert(email_address:is_valid("much.\"more\ unusual\"@example.com")),
 	?_assert(email_address:is_valid("very.unusual.\"@\".unusual.com@example.com")),
-	?_assert(email_address:is_valid("very.\"(),:;<>[]\".VERY.\"very@\\ \"very\".unusual@strange.example.com")),
+	?_assert(email_address:is_valid("very.\"(),:;<>[]\".VERY.\"very@\\ very\".unusual@strange.example.com")),
 
 	?_assertNot(email_address:is_valid("plainaddress")),
 	?_assertNot(email_address:is_valid("#@%^%#$@#$@#.com")),
